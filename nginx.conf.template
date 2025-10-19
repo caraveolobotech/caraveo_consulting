@@ -1,55 +1,52 @@
-user  www-data;
 worker_processes auto;
 pid /run/nginx.pid;
 
-events {
-  worker_connections 1024;
-}
+events { worker_connections 1024; }
 
 http {
-  sendfile on;
-  tcp_nopush on;
-  tcp_nodelay on;
-  keepalive_timeout 65;
-  types_hash_max_size 2048;
-  include /etc/nginx/mime.types;
-  default_type application/octet-stream;
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 65;
+    types_hash_max_size 2048;
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
 
-  # logging minimal
-  access_log /var/log/nginx/access.log;
-  error_log /var/log/nginx/error.log;
+    server_names_hash_bucket_size 64;
 
-  # upstream php-fpm (php-fpm estará escuchando en 127.0.0.1:9000)
-  upstream php-upstream {
-    server 127.0.0.1:9000;
-  }
+    server {
+        listen {{PORT}} default_server;
+        listen [::]:{{PORT}} default_server;
 
-  server {
-    listen {{PORT}};                     # se reemplaza en start.sh
-    server_name _;
+        server_name _;
 
-    root /var/www/html/public;
-    index index.php index.html;
+        root /var/www/html/public;
+        index index.php index.html;
 
-    # Seguridad básica
-    client_max_body_size 50M;
+        # Static files cache
+        location ~* \.(jpg|jpeg|png|gif|ico|css|js|svg|webp|woff2|woff|ttf)$ {
+            try_files $uri $uri/ =404;
+            access_log off;
+            expires 7d;
+            add_header Cache-Control "public";
+        }
 
-    location / {
-      try_files $uri $uri/ /index.php?$query_string;
+        location / {
+            try_files $uri $uri/ /index.php?$query_string;
+        }
+
+        location ~ \.php$ {
+            fastcgi_split_path_info ^(.+\.php)(/.+)$;
+            fastcgi_pass 127.0.0.1:9000;
+            fastcgi_index index.php;
+            include fastcgi_params;
+            fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+            fastcgi_param PATH_INFO $fastcgi_path_info;
+        }
+
+        # Deny .env and storage/private
+        location ~ /\.(env|htaccess|git) {
+            deny all;
+        }
     }
-
-    location ~ \.php$ {
-      include fastcgi_params;
-      fastcgi_pass php-upstream;
-      fastcgi_index index.php;
-      fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-      fastcgi_buffers 16 16k;
-      fastcgi_buffer_size 32k;
-    }
-
-    # No servir .env, storage, git, etc
-    location ~ /\.(env|git|env\.backup) {
-        deny all;
-    }
-  }
 }
