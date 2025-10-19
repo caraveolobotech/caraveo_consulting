@@ -186,7 +186,5 @@ principal (TailwindCSS). Incluye secciones: hero, servicios, proceso y CTA.
 
     <!-- FOOTER COMPONENT -->
     <x-footer />
-
-    <!-- No scripts específicos en esta vista (modal y demás gestionados en header/footer) -->
   </body>
 </html>

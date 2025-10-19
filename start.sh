@@ -1,16 +1,20 @@
 #!/usr/bin/env bash
 set -e
 
+# PORT fallback
 PORT="${PORT:-8080}"
 
-# Replace placeholder port into nginx.conf.template
+# Reemplazar placeholder en nginx.conf.template
 sed "s/{{PORT}}/${PORT}/g" /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
 
-# Ensure storage directories and permissions
-chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache || true
-chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache || true
+# Clear & cache config for new env vars
+php artisan config:clear
+php artisan cache:clear
+php artisan route:clear
+php artisan view:clear
+php artisan config:cache || true
 
-# Start php-fpm (background)
+# Start php-fpm in background
 php-fpm -D
 
 # Start nginx in foreground
