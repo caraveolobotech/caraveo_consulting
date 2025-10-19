@@ -4,12 +4,13 @@ set -e
 # PORT que Render proporciona (si no existe, fallback a 8080)
 PORT="${PORT:-8080}"
 
-# Reemplazar placeholder en nginx.conf.template
+# Reemplazar placeholder en nginx.conf.template -> nginx.conf
 sed "s/{{PORT}}/${PORT}/g" /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
 
-# Iniciar php-fpm
-# algunas imágenes usan /run/php/php8.2-fpm.sock; intentamos con php-fpm
+# Arranca php-fpm en background (daemonize)
+# -D es para daemonize; si la imagen soporta -F (foreground) se podría usar distinto,
+# pero usar -D y dejar nginx en foreground está bien.
 php-fpm -D
 
-# Start nginx in foreground (no daemonize)
+# Iniciar nginx en foreground (no daemonize)
 nginx -g "daemon off;"
