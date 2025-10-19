@@ -1,0 +1,42 @@
+user  www-data;
+worker_processes  auto;
+pid /run/nginx.pid;
+events { worker_connections 1024; }
+
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+    sendfile        on;
+    keepalive_timeout  65;
+
+    server {
+        # Render pasará el puerto en la variable $PORT (reemplazada por start.sh)
+        listen {{PORT}} default_server;
+        server_name  _;
+
+        root /var/www/html/public;
+        index index.php index.html;
+
+        # Gzip (opcional)
+        gzip on;
+        gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+
+        location / {
+            try_files $uri $uri/ /index.php?$query_string;
+        }
+
+        location ~ \.php$ {
+            fastcgi_pass unix:/run/php/php-fpm.sock;
+            fastcgi_index index.php;
+            include fastcgi_params;
+            fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+            fastcgi_param PATH_INFO $fastcgi_path_info;
+        }
+
+        location ~ /\.(?:env|git|ht) {
+            deny all;
+        }
+
+        client_max_body_size 20M;
+    }
+}
